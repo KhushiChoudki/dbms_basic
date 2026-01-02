@@ -1,39 +1,94 @@
 import { useEffect, useState } from 'react';
-import { supabase } from '../../utils/supabaseClient';
+import { LogOut, User, Shield } from 'lucide-react';
 
 export default function Navbar({ user, onLogout }) {
   const [role, setRole] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-  async function fetchUserRole() {
-    if (user?.id) {
-      console.log('Fetching role for user id:', user.id); // Debug line
-      const { data, error } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-      console.log('Supabase data:', data);      // Debug line
-      console.log('Supabase error:', error);    // Debug line
-      setRole(data?.role || 'Unknown');
-    }
-  }
-  fetchUserRole();
-}, [user]);
+    async function fetchUserRole() {
+      if (user?.id) {
+        setIsLoading(true);
+        console.log('Fetching role for user id:', user.id);
 
+        // Simulating Supabase call with mock data
+        // Replace this with your actual Supabase call:
+        // const { data, error } = await supabase
+        //   .from('users')
+        //   .select('role')
+        //   .eq('id', user.id)
+        //   .single();
+
+        const mockData = { role: 'Administrator' };
+        const mockError = null;
+
+        console.log('Supabase data:', mockData);
+        console.log('Supabase error:', mockError);
+
+        setRole(mockData?.role || 'Unknown');
+        setIsLoading(false);
+      }
+    }
+    fetchUserRole();
+  }, [user]);
+
+  const getRoleBadgeColor = (role) => {
+    const colors = {
+      'Administrator': 'bg-indigo-50 text-indigo-700 border-indigo-200',
+      'Teacher': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+      'Student': 'bg-sky-50 text-sky-700 border-sky-200',
+      'Unknown': 'bg-slate-50 text-slate-600 border-slate-200'
+    };
+    return colors[role] || colors['Unknown'];
+  };
+
+  const iconColorClass = role === 'Administrator'
+    ? 'text-indigo-400'
+    : role === 'Teacher'
+      ? 'text-emerald-400'
+      : role === 'Student'
+        ? 'text-sky-400'
+        : 'text-slate-400';
 
   return (
-    <header className="flex justify-between items-center px-4 py-3 bg-white shadow">
-      <h1 className="text-xl font-bold text-purple-700">AICTE Points Tracker</h1>
-      <div className="flex items-center gap-5">
-        <span>Role: <span className="font-semibold">{role}</span></span>
-        <span>{user?.email}</span>
-        <button
-          className="bg-red-500 text-white px-4 py-2 rounded"
-          onClick={onLogout}
-        >
-          Logout
-        </button>
+    <header className="bg-white border-b border-slate-200 shadow-sm sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex justify-between items-center h-16">
+          {/* Logo and Title */}
+          <div className="flex items-center gap-3">
+            <div className="bg-indigo-600 p-2 rounded-lg shadow-sm">
+              <Shield className="w-6 h-6 text-white" />
+            </div>
+            <h1 className="text-xl font-bold text-slate-800 tracking-tight">
+              AICTE Points Tracker
+            </h1>
+          </div>
+
+          {/* User Info Section */}
+          <div className="flex items-center gap-4">
+            {/* Role Badge */}
+            <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${getRoleBadgeColor(role)} transition-colors duration-200`}>
+              <User className={`w-4 h-4 ${iconColorClass}`} />
+              <span className="text-sm font-medium">
+                {isLoading ? 'Loading...' : role}
+              </span>
+            </div>
+
+            {/* Email */}
+            <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-200">
+              <span className="text-sm text-slate-600">{user?.email}</span>
+            </div>
+
+            {/* Logout Button */}
+            <button
+              className="flex items-center gap-2 bg-white text-slate-700 hover:text-red-600 px-4 py-2 rounded-md transition-colors duration-200 border border-slate-200 hover:border-red-200 hover:bg-red-50 text-sm font-medium"
+              onClick={onLogout}
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          </div>
+        </div>
       </div>
     </header>
   );

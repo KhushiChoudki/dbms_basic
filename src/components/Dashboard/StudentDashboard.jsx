@@ -157,138 +157,300 @@ export default function StudentDashboard({ user }) {
 
   if (initialLoading) {
     return (
-      <div className="bg-gray-900 min-h-screen text-green-400 flex flex-col items-center justify-center">
-        <p>Loading...</p>
+      <div className="bg-slate-50 min-h-screen flex flex-col items-center justify-center">
+        <div className="animate-pulse">
+          <div className="w-16 h-16 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin"></div>
+          <p className="mt-4 text-slate-700 text-lg font-medium">Loading your dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen text-green-200 px-6 py-8">
-      {loading && <p className="text-green-400 text-sm mb-2">Updating data...</p>}
-      <h1 className="text-2xl font-bold text-green-500 mb-4">Student Dashboard</h1>
-      <p className="mb-2">
-        <span className="text-gray-300">Welcome,</span>
-        <span className="ml-1 text-green-300">{user.email}</span>
-        {usn && <span className="ml-4 text-green-400">USN: {usn}</span>}
-      </p>
-      <p className="mb-6 text-xl">
-        Total Activity Points:{' '}
-        <span className="font-extrabold text-green-400">{totalPoints}</span>
-      </p>
-      <section className="mb-6">
-        <h2 className="font-bold text-green-300 text-lg mb-2">Activity Breakdown:</h2>
-        {activities.length > 0 ? (
-          <table className="w-full bg-gray-800 rounded overflow-hidden">
-            <thead>
-              <tr className="bg-green-900">
-                <th className="px-3 py-2 text-left text-green-300">Activity ID</th>
-                <th className="px-3 py-2 text-left text-green-300">Points</th>
-                <th className="px-3 py-2 text-left text-green-300">Excel / Proof Link</th>
-              </tr>
-            </thead>
-            <tbody>
-              {activities.map(a => (
-                <tr key={a.activity_id} className="border-b border-gray-700">
-                  <td className="px-3 py-2">{a.activity_id}</td>
-                  <td className="px-3 py-2">{a.points}</td>
-                  <td className="px-3 py-2">
-                    {a.excel_url ? (
-                      a.excel_url.startsWith('http') ? (
-                        <a
-                          href={a.excel_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-green-400 underline"
-                        >
-                          Excel
-                        </a>
-                      ) : a.excel_url.startsWith('0x') && a.excel_url.length === 66 ? (
-                        <a
-                          href={`https://amoy.polygonscan.com/tx/${a.excel_url}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 underline"
-                        >
-                          View Blockchain Tx
-                        </a>
-                      ) : (
-                        <span className="text-green-300">{a.excel_url}</span>
-                      )
-                    ) : (
-                      <span className="text-gray-500">—</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <p className="text-gray-400">No activities yet.</p>
-        )}
-      </section>
-      <section className="mb-6">
-        <h2 className="font-bold text-green-300 text-lg mb-2">Upcoming Events:</h2>
-        {events.length > 0 ? (
-          <ul>
-            {events.map(e => (
-              <li key={e.id} className="mb-1">
-                <span className="text-green-400">{e.title || e.name}</span>
-                <span className="ml-2 text-gray-200">— {e.event_date}</span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-gray-400">No upcoming events at the moment.</p>
-        )}
-      </section>
-      <form
-        onSubmit={handleComplaintSubmit}
-        className="bg-gray-800 border border-green-800 rounded p-4 max-w-xl mx-auto"
-      >
-        <h2 className="font-bold text-green-300 mb-2">Submit Event Complaint:</h2>
-        <input
-          type="text"
-          value={complaintTitle}
-          onChange={e => setComplaintTitle(e.target.value)}
-          placeholder="Complaint Title"
-          className="block w-full mb-2 border border-green-700 bg-gray-900 text-green-100 p-2 rounded"
-          required
-        />
-        <textarea
-          value={complaintText}
-          onChange={e => setComplaintText(e.target.value)}
-          placeholder="Describe your complaint/event issue"
-          className="block w-full mb-2 border border-green-700 bg-gray-900 text-green-100 p-2 rounded"
-          required
-        />
-        <select
-          value={activityId}
-          onChange={e => setActivityId(e.target.value)}
-          className="block w-full mb-2 border border-green-700 bg-gray-900 text-green-100 p-2 rounded"
-          required
-        >
-          <option value="">Select Activity</option>
-          {allActivities.map(act => (
-            <option key={act.activity_id} value={act.activity_id}>
-              {act.activity_id} ({act.title})
-            </option>
-          ))}
-        </select>
-        <input
-          type="file"
-          onChange={e => setComplaintFile(e.target.files[0])}
-          className="block mb-4 text-green-400"
-          required
-        />
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="bg-green-500 text-gray-800 px-4 py-2 rounded hover:bg-green-400 transition"
-        >
-          {isSubmitting ? 'Submitting...' : 'Submit Complaint'}
-        </button>
-      </form>
+    <div className="bg-slate-50 min-h-screen">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl sm:text-4xl font-bold text-slate-800 mb-2">
+                Student Dashboard
+              </h1>
+              <p className="text-slate-600 text-sm">Academic Activity Tracking System</p>
+            </div>
+            {loading && (
+              <span className="flex items-center gap-2 text-indigo-600 text-sm font-medium">
+                <div className="w-2 h-2 bg-indigo-600 rounded-full animate-ping"></div>
+                Syncing data...
+              </span>
+            )}
+          </div>
+
+          <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
+              <div className="flex-1">
+                <p className="text-slate-500 text-xs uppercase tracking-wide font-semibold mb-2">Student Information</p>
+                <p className="text-slate-900 text-lg font-semibold mb-1">{user.email}</p>
+                {usn && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-slate-600 text-sm">University Seat Number:</span>
+                    <span className="text-slate-900 font-mono font-semibold text-sm">{usn}</span>
+                  </div>
+                )}
+              </div>
+              <div className="bg-gradient-to-br from-slate-700 to-slate-800 rounded-xl p-6 shadow-md min-w-[200px]">
+                <p className="text-slate-300 text-xs uppercase tracking-wide font-semibold mb-2">Total Activity Points</p>
+                <p className="text-5xl font-bold text-white">{totalPoints}</p>
+                <p className="text-slate-400 text-xs mt-2">Cumulative Score</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Activity Breakdown Section */}
+        <section className="mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800">Activity Breakdown</h2>
+              <p className="text-slate-600 text-sm mt-1">Detailed record of your completed activities and earned points</p>
+            </div>
+            <div className="p-6">
+              {activities.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="px-6 py-4 text-left text-slate-700 font-bold text-xs uppercase tracking-wider">
+                          Activity ID
+                        </th>
+                        <th className="px-6 py-4 text-left text-slate-700 font-bold text-xs uppercase tracking-wider">
+                          Points Awarded
+                        </th>
+                        <th className="px-6 py-4 text-left text-slate-700 font-bold text-xs uppercase tracking-wider">
+                          Supporting Documentation
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {activities.map(a => (
+                        <tr key={a.activity_id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-6 py-4 text-slate-800 font-mono text-sm font-medium">{a.activity_id}</td>
+                          <td className="px-6 py-4">
+                            <span className="inline-flex items-center px-4 py-1.5 rounded-lg text-sm font-bold bg-slate-100 text-slate-800 border border-slate-200">
+                              {a.points} pts
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            {a.excel_url ? (
+                              a.excel_url.startsWith('http') ? (
+                                <a
+                                  href={a.excel_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors text-sm"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                  </svg>
+                                  View Document
+                                </a>
+                              ) : a.excel_url.startsWith('0x') && a.excel_url.length === 66 ? (
+                                <a
+                                  href={`https://amoy.polygonscan.com/tx/${a.excel_url}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-2 text-indigo-600 hover:text-indigo-800 font-medium transition-colors text-sm"
+                                >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                  </svg>
+                                  View Blockchain Record
+                                </a>
+                              ) : (
+                                <span className="text-slate-700 text-sm font-mono">{a.excel_url}</span>
+                              )
+                            ) : (
+                              <span className="text-slate-400 text-sm italic">No documentation available</span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-slate-50 rounded-lg">
+                  <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  <p className="text-slate-700 text-lg font-semibold mb-1">No Activities Recorded</p>
+                  <p className="text-slate-500 text-sm">Your completed activities will be displayed here once they are registered</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Upcoming Events Section */}
+        <section className="mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+              <h2 className="text-xl font-bold text-slate-800">Upcoming Events & Opportunities</h2>
+              <p className="text-slate-600 text-sm mt-1">Scheduled academic and extracurricular events</p>
+            </div>
+            <div className="p-6">
+              {events.length > 0 ? (
+                <div className="space-y-3">
+                  {events.map(e => (
+                    <div key={e.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all hover:shadow-sm">
+                      <div className="flex items-center gap-4">
+                        <div className="w-3 h-3 bg-indigo-500 rounded-full flex-shrink-0"></div>
+                        <span className="text-slate-800 font-semibold text-base">{e.title || e.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-slate-600">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                        <span className="text-sm font-mono font-semibold">{e.event_date}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-16 bg-slate-50 rounded-lg">
+                  <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-slate-700 text-lg font-semibold mb-1">No Upcoming Events</p>
+                  <p className="text-slate-500 text-sm">New opportunities will be posted here as they become available</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Complaint Form Section */}
+        <section>
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden max-w-4xl mx-auto">
+            <div className="bg-amber-50 px-6 py-4 border-b border-amber-100">
+              <div className="flex items-start gap-3">
+                <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">Submit Event Complaint</h2>
+                  <p className="text-slate-600 text-sm mt-1">Report discrepancies, issues, or concerns regarding registered events and activities</p>
+                </div>
+              </div>
+            </div>
+            <form onSubmit={handleComplaintSubmit} className="p-8 space-y-6">
+              <div>
+                <label className="block text-slate-700 text-sm font-bold mb-2 uppercase tracking-wide">
+                  Complaint Title *
+                </label>
+                <input
+                  type="text"
+                  value={complaintTitle}
+                  onChange={e => setComplaintTitle(e.target.value)}
+                  placeholder="Brief summary of the issue"
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 text-sm font-bold mb-2 uppercase tracking-wide">
+                  Detailed Description *
+                </label>
+                <textarea
+                  value={complaintText}
+                  onChange={e => setComplaintText(e.target.value)}
+                  placeholder="Provide comprehensive details about your complaint, including dates, circumstances, and any relevant information"
+                  rows={5}
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition resize-none"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 text-sm font-bold mb-2 uppercase tracking-wide">
+                  Related Activity *
+                </label>
+                <select
+                  value={activityId}
+                  onChange={e => setActivityId(e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-slate-200 rounded-lg text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
+                  required
+                >
+                  <option value="">Select the activity this complaint pertains to</option>
+                  {allActivities.map(act => (
+                    <option key={act.activity_id} value={act.activity_id}>
+                      {act.activity_id} — {act.title}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 text-sm font-bold mb-2 uppercase tracking-wide">
+                  Supporting Evidence (Image) *
+                </label>
+                <div className="relative border-2 border-dashed border-slate-300 rounded-lg p-6 hover:border-indigo-400 transition-colors">
+                  <input
+                    type="file"
+                    onChange={e => setComplaintFile(e.target.files[0])}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                    accept="image/*"
+                    required
+                  />
+                  <div className="text-center">
+                    <svg className="mx-auto h-12 w-12 text-slate-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <p className="text-slate-600 text-sm font-medium mb-1">
+                      {complaintFile ? complaintFile.name : 'Click to upload or drag and drop'}
+                    </p>
+                    <p className="text-slate-400 text-xs">PNG, JPG, or JPEG (MAX. 10MB)</p>
+                  </div>
+                </div>
+                {complaintFile && (
+                  <div className="mt-3 flex items-center gap-2 text-sm text-green-700 bg-green-50 px-4 py-2 rounded-lg border border-green-200">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                    </svg>
+                    File selected: <span className="font-semibold">{complaintFile.name}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="pt-4">
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-4 px-6 rounded-lg focus:outline-none focus:ring-4 focus:ring-slate-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl text-base uppercase tracking-wide"
+                >
+                  {isSubmitting ? (
+                    <span className="flex items-center justify-center gap-3">
+                      <div className="w-5 h-5 border-3 border-white border-t-transparent rounded-full animate-spin"></div>
+                      Processing Submission...
+                    </span>
+                  ) : (
+                    <span className="flex items-center justify-center gap-2">
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Submit Complaint for Review
+                    </span>
+                  )}
+                </button>
+                <p className="text-slate-500 text-xs text-center mt-3">
+                  All complaints are reviewed by administrative staff within 2-3 business days
+                </p>
+              </div>
+            </form>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }

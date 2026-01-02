@@ -56,14 +56,18 @@ function AppContent() {
   };
 
   if (!user) return <LoginForm onLogin={setUser} />;
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return (
+    <div className="flex items-center justify-center min-h-screen bg-slate-50">
+      <div className="text-slate-500">Loading...</div>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col min-h-screen">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       <Navbar user={user} role={role || "Unknown"} onLogout={logout} />
-      <div className="flex-grow bg-gray-50 p-4">
+      <main className="flex-grow p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
         <Dashboard user={user} role={role || "Unknown"} />
-      </div>
+      </main>
     </div>
   );
 }
