@@ -68,7 +68,7 @@ export default function StudentDashboard({ user }) {
     try {
       const { data: acts } = await supabase
         .from('student_activities')
-        .select('activity_id, points, excel_url')
+        .select('activity_id, points, excel_url, activities (title)')
         .eq('usn', usn);
       const actsList = acts ?? [];
       const total = actsList.reduce((sum, a) => sum + (a.points || 0), 0);
@@ -211,8 +211,8 @@ export default function StudentDashboard({ user }) {
         <section className="mb-8">
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
             <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
-              <h2 className="text-xl font-bold text-slate-800">Activity Breakdown</h2>
-              <p className="text-slate-600 text-sm mt-1">Detailed record of your completed activities and earned points</p>
+              <h2 className="text-xl font-bold text-slate-800">Completed Activities</h2>
+              <p className="text-slate-600 text-sm mt-1">Detailed record of your approved activities and earned points</p>
             </div>
             <div className="p-6">
               {activities.length > 0 ? (
@@ -221,7 +221,7 @@ export default function StudentDashboard({ user }) {
                     <thead>
                       <tr className="border-b border-slate-200 bg-slate-50">
                         <th className="px-6 py-4 text-left text-slate-700 font-bold text-xs uppercase tracking-wider">
-                          Activity ID
+                          Activity Name
                         </th>
                         <th className="px-6 py-4 text-left text-slate-700 font-bold text-xs uppercase tracking-wider">
                           Points Awarded
@@ -234,7 +234,9 @@ export default function StudentDashboard({ user }) {
                     <tbody className="divide-y divide-slate-100">
                       {activities.map(a => (
                         <tr key={a.activity_id} className="hover:bg-slate-50 transition-colors">
-                          <td className="px-6 py-4 text-slate-800 font-mono text-sm font-medium">{a.activity_id}</td>
+                          <td className="px-6 py-4 text-slate-800 font-medium text-sm">
+                            {a.activities?.title || a.activity_id}
+                          </td>
                           <td className="px-6 py-4">
                             <span className="inline-flex items-center px-4 py-1.5 rounded-lg text-sm font-bold bg-slate-100 text-slate-800 border border-slate-200">
                               {a.points} pts

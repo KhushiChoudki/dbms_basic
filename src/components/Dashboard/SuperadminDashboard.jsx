@@ -20,15 +20,27 @@ async function getUsnsFromExcel(url) {
   const firstSheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[firstSheetName];
   const data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-  const usnIndex = (data[0] || []).findIndex(
-    h => typeof h === 'string' && h.toLowerCase().includes('usn')
-  );
+
+  // Find Headers
+  const headerRow = data[0] || [];
+  const usnIndex = headerRow.findIndex(h => typeof h === 'string' && h.toLowerCase().includes('usn'));
+  const pointsIndex = headerRow.findIndex(h => typeof h === 'string' && (h.toLowerCase().includes('point') || h.toLowerCase().includes('score')));
+
   return data.slice(1)
-    .map(r =>
-      typeof r[usnIndex] === 'string'
+    .map(r => {
+      const usn = typeof r[usnIndex] === 'string'
         ? r[usnIndex].trim().toUpperCase()
-        : ('' + r[usnIndex]).trim().toUpperCase())
-    .filter(Boolean);
+        : (r[usnIndex] ? ('' + r[usnIndex]).trim().toUpperCase() : null);
+
+      if (!usn) return null;
+
+      let points = null;
+      if (pointsIndex !== -1 && r[pointsIndex] !== undefined) {
+        points = Number(r[pointsIndex]);
+      }
+      return { usn, points };
+    })
+    .filter(item => item && item.usn);
 }
 
 export default function SuperadminDashboard({ user }) {
@@ -88,28 +100,30 @@ export default function SuperadminDashboard({ user }) {
     }
     setLoading(true);
 
-    let excelUsns = [];
+    let excelData = [];
     try {
       if (activity.excel_url) {
-        excelUsns = await getUsnsFromExcel(activity.excel_url);
+        excelData = await getUsnsFromExcel(activity.excel_url);
       }
     } catch (ex) {
       alert('Excel/Sheet parse failed: ' + ex.message);
       setLoading(false);
       return;
     }
-    if (!excelUsns.length) {
+
+    if (!excelData.length) {
       alert('No USNs found in the uploaded Excel.');
       setLoading(false);
       return;
     }
 
-    console.log("Extracted USNs from Excel:", excelUsns);
+    console.log("Extracted Data from Excel:", excelData);
+    const usnList = excelData.map(d => d.usn);
 
     const { data: students, error: se } = await supabase
       .from('students')
       .select('usn,email,total_points')
-      .in('usn', excelUsns);
+      .in('usn', usnList);
 
     console.log("Matched Students from DB:", students);
     if (se) console.error("Supabase Error:", se);
@@ -126,14 +140,22 @@ export default function SuperadminDashboard({ user }) {
       return;
     }
 
-    const inserts = students.map(s => ({
-      id: crypto.randomUUID(),
-      usn: s.usn,
-      activity_id: activity.activity_id,
-      email: s.email,
-      points: activity.points,
-      excel_url: activity.excel_url || null,
-    }));
+    const inserts = students.map(s => {
+      // OVERRIDE LOGIC: Use Excel points if available, else Activity default
+      const matchedRow = excelData.find(d => d.usn === s.usn);
+      const pointsToAward = (matchedRow && matchedRow.points !== null && !isNaN(matchedRow.points))
+        ? matchedRow.points
+        : Number(activity.points);
+
+      return {
+        id: crypto.randomUUID(),
+        usn: s.usn,
+        activity_id: activity.activity_id,
+        email: s.email,
+        points: pointsToAward,
+        excel_url: activity.excel_url || null,
+      };
+    });
 
     const { error: insertErr } = await supabase
       .from('student_activities')
@@ -147,7 +169,14 @@ export default function SuperadminDashboard({ user }) {
 
     await Promise.all(
       students.map(async s => {
-        const updatedTotal = (s.total_points || 0) + (activity.points || 0);
+        // Find the specific points awarded to this student in the `inserts` array above
+        // or re-calculate. simpler to re-calculate logic here.
+        const matchedRow = excelData.find(d => d.usn === s.usn);
+        const pointsToAward = (matchedRow && matchedRow.points !== null && !isNaN(matchedRow.points))
+          ? matchedRow.points
+          : Number(activity.points);
+
+        const updatedTotal = (s.total_points || 0) + pointsToAward;
         await supabase
           .from('students')
           .update({ total_points: updatedTotal })
