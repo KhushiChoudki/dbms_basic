@@ -39,9 +39,16 @@ function AppContent() {
 
     // Listen for auth changes
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      setRole(null); // Will refetch upon re-render
-      setLoading(true);
+      // Only trigger reload if user Actually changed (login/logout/switch)
+      // Avoid reloading on TOKEN_REFRESH which happens on tab focus
+      setUser(prevUser => {
+        const newUser = session?.user ?? null;
+        if (prevUser?.id !== newUser?.id) {
+          setRole(null);
+          setLoading(true);
+        }
+        return newUser;
+      });
     });
 
     return () => listener.subscription.unsubscribe();

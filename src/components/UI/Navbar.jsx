@@ -1,36 +1,6 @@
-import { useEffect, useState } from 'react';
 import { LogOut, User, Shield } from 'lucide-react';
 
-export default function Navbar({ user, onLogout }) {
-  const [role, setRole] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchUserRole() {
-      if (user?.id) {
-        setIsLoading(true);
-        console.log('Fetching role for user id:', user.id);
-
-        // Simulating Supabase call with mock data
-        // Replace this with your actual Supabase call:
-        // const { data, error } = await supabase
-        //   .from('users')
-        //   .select('role')
-        //   .eq('id', user.id)
-        //   .single();
-
-        const mockData = { role: 'Administrator' };
-        const mockError = null;
-
-        console.log('Supabase data:', mockData);
-        console.log('Supabase error:', mockError);
-
-        setRole(mockData?.role || 'Unknown');
-        setIsLoading(false);
-      }
-    }
-    fetchUserRole();
-  }, [user]);
+export default function Navbar({ user, role, onLogout }) {
 
   const getRoleBadgeColor = (role) => {
     const colors = {
@@ -70,7 +40,7 @@ export default function Navbar({ user, onLogout }) {
             <div className={`flex items-center gap-2 px-3 py-1 rounded-full border ${getRoleBadgeColor(role)} transition-colors duration-200`}>
               <User className={`w-4 h-4 ${iconColorClass}`} />
               <span className="text-sm font-medium">
-                {isLoading ? 'Loading...' : role}
+                {role || 'Loading...'}
               </span>
             </div>
 

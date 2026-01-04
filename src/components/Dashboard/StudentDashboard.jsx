@@ -85,12 +85,6 @@ export default function StudentDashboard({ user }) {
   useEffect(() => {
     if (!usn) return;
     fetchData();
-    function handleVisibilityChange() {
-      if (!document.hidden) fetchData();
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () =>
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
   }, [usn]);
 
   useEffect(() => {
