@@ -26,6 +26,9 @@ export default function StudentDashboard({ user }) {
   // All activities for dropdown
   const [allActivities, setAllActivities] = useState([]);
 
+  // Modal state for upcoming events
+  const [selectedEvent, setSelectedEvent] = useState(null);
+
   useEffect(() => {
     if (usn) {
       sessionStorage.setItem('student_usn', usn);
@@ -298,10 +301,17 @@ export default function StudentDashboard({ user }) {
               {events.length > 0 ? (
                 <div className="space-y-3">
                   {events.map(e => (
-                    <div key={e.id} className="flex items-center justify-between p-5 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all hover:shadow-sm">
+                    <div
+                      key={e.id}
+                      onClick={() => setSelectedEvent(e)}
+                      className="flex items-center justify-between p-5 bg-slate-50 rounded-lg border border-slate-200 hover:border-indigo-300 transition-all hover:shadow-sm cursor-pointer group"
+                    >
                       <div className="flex items-center gap-4">
-                        <div className="w-3 h-3 bg-indigo-500 rounded-full flex-shrink-0"></div>
-                        <span className="text-slate-800 font-semibold text-base">{e.title || e.name}</span>
+                        <div className="w-3 h-3 bg-indigo-500 rounded-full flex-shrink-0 group-hover:scale-125 transition-transform"></div>
+                        <div>
+                          <span className="text-slate-800 font-semibold text-base block">{e.title || e.name}</span>
+                          <span className="text-xs text-indigo-600 font-medium">Click for details</span>
+                        </div>
                       </div>
                       <div className="flex items-center gap-2 text-slate-600">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -446,6 +456,54 @@ export default function StudentDashboard({ user }) {
             </form>
           </div>
         </section>
+
+        {selectedEvent && (
+          <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setSelectedEvent(null)}>
+            <div className="bg-white shadow-xl rounded-xl p-6 w-full max-w-lg border border-slate-200 relative animate-in fade-in zoom-in duration-200" onClick={e => e.stopPropagation()}>
+              <button
+                onClick={() => setSelectedEvent(null)}
+                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full w-8 h-8 flex items-center justify-center transition-all duration-200 text-xl"
+              >
+                ×
+              </button>
+
+              <div className="mb-6">
+                <h2 className="text-xl font-bold text-slate-900 mb-1 pr-6">
+                  {selectedEvent.title || selectedEvent.name}
+                </h2>
+                <div className="flex items-center gap-2 text-slate-500 text-sm">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  <span className="font-mono">{selectedEvent.event_date}</span>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-100">
+                  <p className="text-xs font-bold text-indigo-600 uppercase tracking-wide mb-1">Activity Points</p>
+                  <p className="text-2xl font-bold text-indigo-900">{selectedEvent.points} Points</p>
+                </div>
+
+                <div>
+                  <p className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-2">Description</p>
+                  <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                    {selectedEvent.description || 'No description provided for this event.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-4 border-t border-slate-100 flex justify-end">
+                <button
+                  onClick={() => setSelectedEvent(null)}
+                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition-colors text-sm"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
