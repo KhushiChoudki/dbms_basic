@@ -27,7 +27,7 @@ export default function Navbar({ user, role, onLogout }) {
           {/* Logo and Title */}
           <div className="flex items-center gap-3">
             <div className="bg-indigo-600 p-2 rounded-lg shadow-sm">
-              <Shield className="w-6 h-6 text-white" />
+              <img src="/rv_logo.png" alt="RVCE Logo" className="h-8 w-auto object-contain filter brightness-0 invert" />
             </div>
             <h1 className="text-xl font-bold text-slate-800 tracking-tight">
               AICTE Points Tracker
