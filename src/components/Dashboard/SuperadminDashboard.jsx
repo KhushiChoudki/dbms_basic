@@ -3,8 +3,18 @@ import { supabase } from '../../utils/supabaseClient';
 import * as XLSX from 'xlsx';
 
 async function getUsnsFromExcel(url) {
-  const response = await fetch(url);
-  if (!response.ok) throw new Error('Could not download Excel');
+  // Auto-convert Google Sheet "edit" links to "export" links
+  let fetchUrl = url;
+  if (url.includes('docs.google.com/spreadsheets')) {
+    const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+    if (match && match[1]) {
+      fetchUrl = `https://docs.google.com/spreadsheets/d/${match[1]}/export?format=xlsx`;
+      console.log("Converted Google Sheet URL to:", fetchUrl);
+    }
+  }
+
+  const response = await fetch(fetchUrl);
+  if (!response.ok) throw new Error('Could not download Excel. Status: ' + response.status);
   const arrayBuffer = await response.arrayBuffer();
   const workbook = XLSX.read(arrayBuffer, { type: 'array' });
   const firstSheetName = workbook.SheetNames[0];
@@ -94,10 +104,15 @@ export default function SuperadminDashboard({ user }) {
       return;
     }
 
+    console.log("Extracted USNs from Excel:", excelUsns);
+
     const { data: students, error: se } = await supabase
       .from('students')
       .select('usn,email,total_points')
       .in('usn', excelUsns);
+
+    console.log("Matched Students from DB:", students);
+    if (se) console.error("Supabase Error:", se);
 
     if (se) {
       alert('Error fetching students: ' + se.message);
