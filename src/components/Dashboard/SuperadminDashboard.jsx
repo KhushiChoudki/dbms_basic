@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 import * as XLSX from 'xlsx';
 
@@ -24,6 +24,7 @@ async function getUsnsFromExcel(url) {
 export default function SuperadminDashboard({ user }) {
   const [superadminId, setSuperadminId] = useState(null);
   const [activities, setActivities] = useState([]);
+  const [allActivities, setAllActivities] = useState([]); // For analytics
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -49,6 +50,7 @@ export default function SuperadminDashboard({ user }) {
           return;
         }
         setSuperadminId(supRow.superadmin_id);
+        // Fetch pending for approval table
         const { data: acts, error: actsErr } = await supabase
           .from('activities')
           .select('*')
@@ -56,6 +58,11 @@ export default function SuperadminDashboard({ user }) {
           .not('excel_url', 'is', null);
         if (actsErr) throw actsErr;
         setActivities(acts ?? []);
+
+        // Fetch ALL activities for analytics
+        const { data: allActs } = await supabase.from('activities').select('*');
+        setAllActivities(allActs ?? []);
+
       } catch (err) {
         setError('Failed to load data: ' + err.message);
       }
@@ -244,6 +251,81 @@ export default function SuperadminDashboard({ user }) {
             </div>
           </div>
         </div>
+
+        {/* SDG Analytics Section */}
+        <section className="mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-5 bg-slate-50 border-b border-slate-200">
+              <h2 className="text-xl font-bold text-slate-900">SDG Analytics</h2>
+              <p className="text-slate-600 text-sm mt-1">AI-based classification analysis of all activities</p>
+            </div>
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Chart 1: Ratio */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <h3 className="text-sm font-bold text-slate-700 uppercase mb-4">SDG vs Non-SDG Distribution</h3>
+                {allActivities.length > 0 ? (
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 space-y-3">
+                      {(() => {
+                        const sdgCount = allActivities.filter(a => a.is_sdg).length;
+                        const nonSdgCount = allActivities.length - sdgCount;
+                        const total = allActivities.length;
+                        const sdgPct = Math.round((sdgCount / total) * 100);
+                        return (
+                          <>
+                            <div>
+                              <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-green-700">SDG Related ({sdgCount})</span>
+                                <span className="text-slate-500">{sdgPct}%</span>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-2.5">
+                                <div className="bg-green-500 h-2.5 rounded-full" style={{ width: `${sdgPct}%` }}></div>
+                              </div>
+                            </div>
+                            <div>
+                              <div className="flex justify-between text-xs font-semibold mb-1">
+                                <span className="text-slate-700">Non-SDG ({nonSdgCount})</span>
+                                <span className="text-slate-500">{100 - sdgPct}%</span>
+                              </div>
+                              <div className="w-full bg-slate-200 rounded-full h-2.5">
+                                <div className="bg-slate-400 h-2.5 rounded-full" style={{ width: `${100 - sdgPct}%` }}></div>
+                              </div>
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                ) : <p className="text-sm text-slate-500 italic">No data available</p>}
+              </div>
+
+              {/* Chart 2: Top Categories */}
+              <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
+                <h3 className="text-sm font-bold text-slate-700 uppercase mb-4">Top SDG Categories</h3>
+                <div className="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                  {(() => {
+                    const counts = {};
+                    allActivities.forEach(a => {
+                      if (a.is_sdg && a.sdg_category) {
+                        counts[a.sdg_category] = (counts[a.sdg_category] || 0) + 1;
+                      }
+                    });
+                    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+
+                    if (sorted.length === 0) return <p className="text-xs text-slate-500 italic">No SDG activities yet.</p>;
+
+                    return sorted.map(([cat, count]) => (
+                      <div key={cat} className="flex items-center justify-between text-sm bg-white p-2 rounded border border-slate-100 shadow-sm">
+                        <span className="font-medium text-slate-700 truncate max-w-[80%]">{cat}</span>
+                        <span className="font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full text-xs">{count}</span>
+                      </div>
+                    ));
+                  })()}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <section>
           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

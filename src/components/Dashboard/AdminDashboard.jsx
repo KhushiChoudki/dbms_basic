@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../../utils/supabaseClient';
 import { v4 as uuidv4 } from 'uuid';
 import { ethers } from 'ethers';
+import { classifyActivity } from '../../utils/aiClassifier';
 
 const CONTRACT_ADDRESS = "0x4392c7cec90b3c2433520e5d0edd4d905a28a06a";
 const CONTRACT_ABI = [
@@ -268,7 +269,10 @@ export default function AdminDashboard({ user }) {
   const [activities, setActivities] = useState([]);
   const [complaints, setComplaints] = useState([]);
   const [verifying, setVerifying] = useState(null);
+
   const [pointsInputs, setPointsInputs] = useState({});
+  // New state for adding links post-event
+  const [editingLinkIds, setEditingLinkIds] = useState({}); // { activityId: "url_value" }
 
   useEffect(() => {
     async function fetchAdminIdAndActivities() {
@@ -313,6 +317,13 @@ export default function AdminDashboard({ user }) {
     setLoading(true);
     const id = uuidv4();
 
+    // AI Classification
+    const classification = await classifyActivity(opForm.title, opForm.description);
+    console.log("AdminDashboard: Classification Result:", classification);
+
+    // Note: If DB columns missing, this might error or be ignored depending on Supabase setting.
+    // Assuming columns `is_sdg` (bool) and `sdg_category` (text) exist.
+
     const { error: oppError } = await supabase.from('opportunities').insert([
       {
         id,
@@ -335,6 +346,8 @@ export default function AdminDashboard({ user }) {
         approved_by: null,
         event_date: opForm.event_date,
         excel_url: opForm.excel_url || null,
+        is_sdg: classification.is_sdg,
+        sdg_category: classification.sdg_category,
       },
     ]);
 
@@ -358,6 +371,45 @@ export default function AdminDashboard({ user }) {
       .order('event_date');
     setActivities(actRows2 ?? []);
     setLoading(false);
+
+  };
+
+  const handleUpdateLink = async (activityId) => {
+    const newUrl = editingLinkIds[activityId];
+    if (!newUrl) return;
+
+    const { error } = await supabase
+      .from('activities')
+      .update({ excel_url: newUrl })
+      .eq('activity_id', activityId);
+
+    if (error) {
+      alert(`Error updating link: ${error.message}`);
+    } else {
+      alert('Link updated successfully!');
+      // Update local state
+      setActivities(prev => prev.map(a =>
+        a.activity_id === activityId ? { ...a, excel_url: newUrl } : a
+      ));
+      setEditingLinkIds(prev => {
+        const next = { ...prev };
+        delete next[activityId];
+        return next;
+      });
+    }
+  };
+
+  const isEventPassed = (dateStr) => {
+    if (!dateStr) return false;
+    const eventDate = new Date(dateStr);
+    const today = new Date();
+    // Compare dates (ignoring time for simplicity, or keep full comparison)
+    // eventDate is usually YYYY-MM-DD.
+    // Use a safety margin or strict comparison?
+    // Let's assume strict: if today is AFTER the event day (>= next day)
+    // Or if today is the same day? Request says "after the current date... later on... after the completion".
+    // Let's assume safe check: today > eventDate (where eventDate is treated as 00:00:00 of that day)
+    return today > eventDate;
   };
 
   async function approveComplaint(complaint, points) {
@@ -516,9 +568,11 @@ export default function AdminDashboard({ user }) {
                       <td className="px-6 py-4">
                         {a.excel_url
                           ? a.excel_url.startsWith('http') ? (
-                            <a href={a.excel_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-900 hover:underline">
-                              Google Sheet Link
-                            </a>
+                            <div className="flex items-center gap-2">
+                              <a href={a.excel_url} target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-900 hover:underline">
+                                Google Sheet Link
+                              </a>
+                            </div>
                           ) : a.excel_url.startsWith('0x') && a.excel_url.length === 66 ? (
                             <a href={`https://amoy.polygonscan.com/tx/${a.excel_url}`}
                               target="_blank" rel="noopener noreferrer" className="text-indigo-600 hover:text-indigo-900 hover:underline">
@@ -527,7 +581,30 @@ export default function AdminDashboard({ user }) {
                           ) : (
                             <span>{a.excel_url}</span>
                           )
-                          : <span className="text-slate-400">Not uploaded</span>}
+                          : (
+                            isEventPassed(a.event_date) ? (
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="url"
+                                  placeholder="Paste Sheet Link"
+                                  className="px-2 py-1 text-xs border border-slate-300 rounded focus:border-indigo-500 outline-none w-full"
+                                  value={editingLinkIds[a.activity_id] || ''}
+                                  onChange={(e) => setEditingLinkIds(prev => ({ ...prev, [a.activity_id]: e.target.value }))}
+                                />
+                                <button
+                                  onClick={() => handleUpdateLink(a.activity_id)}
+                                  // Verify link is present before enabling
+                                  disabled={!editingLinkIds[a.activity_id]}
+                                  className="text-xs bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700 disabled:opacity-50"
+                                >
+                                  Save Link
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-amber-500 text-xs italic">Pending Event Completion</span>
+                            )
+                          )
+                        }
                       </td>
                     </tr>
                   ))}
@@ -574,7 +651,7 @@ export default function AdminDashboard({ user }) {
                       </td>
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${complaint.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            complaint.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                          complaint.status === 'rejected' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
                           }`}>
                           {complaint.status}
                         </span>

@@ -103,45 +103,92 @@ export default function CounsellorDashboard({ user }) {
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [pointsMap, setPointsMap] = useState({});
 
+  // Analytics State
+  const [totalStudents, setTotalStudents] = useState(0);
+  const [avgPoints, setAvgPoints] = useState(0);
+  const [pointDist, setPointDist] = useState({ low: 0, med: 0, high: 0 }); // 0-50, 50-100, 100+
+  const [sdgStats, setSdgStats] = useState({ sdg: 0, nonSdg: 0 });
+
   useEffect(() => {
-    async function fetchAllStudents() {
+    async function fetchCounsellorData() {
       setLoading(true);
+
       const { data: studentRows, error } = await supabase
         .from('students')
         .select('id, name, usn');
-      if (error) {
+
+      if (error || !studentRows) {
         setStudents([]);
-        setPointsMap({});
         setLoading(false);
         return;
-      } else {
-        setStudents(studentRows ?? []);
       }
 
-      // Fetch all points for awarded activities by usn
-      if (studentRows?.length > 0) {
+      setStudents(studentRows);
+      setTotalStudents(studentRows.length);
+
+      if (studentRows.length > 0) {
         const usns = studentRows.map((s) => s.usn);
-        const { data: actData, error: activityError } = await supabase
+
+        // Use INNER JOIN if foreign key is set up, or just select related
+        // Assuming student_activities has fk to activities
+        const { data: actData, error: actErr } = await supabase
           .from('student_activities')
-          .select('usn, points');
-        if (activityError) {
+          .select(`
+            usn, 
+            points,
+            activities!inner (
+              is_sdg
+            )
+          `)
+          .in('usn', usns);
+
+        if (actErr) {
+          console.error("Error fetching activities", actErr);
           setPointsMap({});
-        } else {
-          const totals = {};
-          usns.forEach((usn) => {
-            totals[usn] = (actData ?? [])
-              .filter((row) => row.usn === usn)
-              .reduce((acc, r) => acc + r.points, 0);
-          });
-          setPointsMap(totals);
+          setLoading(false);
+          return;
         }
+
+        const totals = {};
+        let low = 0, med = 0, high = 0;
+        let sdgCount = 0;
+        let nonSdgCount = 0;
+
+        // Count participations
+        (actData || []).forEach(row => {
+          // Point aggregation
+          totals[row.usn] = (totals[row.usn] || 0) + (row.points || 0);
+
+          // SDG Counting
+          if (row.activities && row.activities.is_sdg) {
+            sdgCount++;
+          } else {
+            nonSdgCount++;
+          }
+        });
+
+        // Distribution & Average
+        let grandTotal = 0;
+        studentRows.forEach(student => {
+          const p = totals[student.usn] || 0;
+          grandTotal += p;
+          if (p < 50) low++;
+          else if (p < 100) med++;
+          else high++;
+        });
+
+        setPointsMap(totals);
+        setAvgPoints(studentRows.length ? Math.round(grandTotal / studentRows.length) : 0);
+        setPointDist({ low, med, high });
+        setSdgStats({ sdg: sdgCount, nonSdg: nonSdgCount });
+
       } else {
         setPointsMap({});
       }
       setLoading(false);
     }
-    fetchAllStudents();
-  }, []);
+    fetchCounsellorData();
+  }, [user]);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -154,6 +201,69 @@ export default function CounsellorDashboard({ user }) {
           <div className="flex items-center gap-2">
             <span className="text-slate-500 text-sm">Welcome,</span>
             <span className="text-slate-900 text-sm font-semibold">{user.email}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Analytics Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <h2 className="text-xl font-bold text-slate-800 mb-6">Class Analytics</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {/* Card 1: Total Students */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <p className="text-slate-500 text-sm font-medium uppercase">Total Students</p>
+            <p className="text-3xl font-bold text-indigo-600 mt-2">{totalStudents}</p>
+          </div>
+
+          {/* Card 2: Average Points */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+            <p className="text-slate-500 text-sm font-medium uppercase">Avg. Class Score</p>
+            <p className="text-3xl font-bold text-green-600 mt-2">{avgPoints}</p>
+          </div>
+
+          {/* Card 3: Donut Chart (CSS) - Point Distribution */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+            <p className="text-slate-500 text-xs font-medium uppercase mb-2">Performance Bands</p>
+            <div className="flex items-center gap-4">
+              {/* Simple CSS Donut representation using Conic Gradient */}
+              <div className="w-16 h-16 rounded-full flex-shrink-0" style={{
+                background: `conic-gradient(
+                    #ef4444 0% ${(pointDist.low / totalStudents) * 100}%, 
+                    #f59e0b ${(pointDist.low / totalStudents) * 100}% ${((pointDist.low + pointDist.med) / totalStudents) * 100}%, 
+                    #10b981 ${((pointDist.low + pointDist.med) / totalStudents) * 100}% 100%
+                  )`
+              }}></div>
+              <div className="text-xs space-y-1">
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> Low (&lt;50)</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-amber-500"></div> Med (50-100)</div>
+                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"></div> High (100+)</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 4: SDG Breakdown */}
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col justify-between">
+            <p className="text-slate-500 text-xs font-medium uppercase mb-2">SDG Participation</p>
+            <div className="space-y-3">
+              <div>
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-blue-600">SDG Activities</span>
+                  <span>{sdgStats.sdg}</span>
+                </div>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full mt-1">
+                  <div className="bg-blue-500 h-1.5 rounded-full" style={{ width: `${(sdgStats.sdg / (sdgStats.sdg + sdgStats.nonSdg || 1)) * 100}%` }}></div>
+                </div>
+              </div>
+              <div>
+                <div className="flex justify-between text-xs font-semibold">
+                  <span className="text-slate-500">Other</span>
+                  <span>{sdgStats.nonSdg}</span>
+                </div>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full mt-1">
+                  <div className="bg-slate-400 h-1.5 rounded-full" style={{ width: `${(sdgStats.nonSdg / (sdgStats.sdg + sdgStats.nonSdg || 1)) * 100}%` }}></div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
